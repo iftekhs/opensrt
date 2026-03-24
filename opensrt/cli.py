@@ -38,7 +38,7 @@ def cli():
 
 
 @cli.command()
-@click.argument("video_path", type=click.Path(exists=True))
+@click.argument("video_path")
 @click.option(
     "--model",
     default="base",
@@ -50,9 +50,19 @@ def cli():
     default=None,
     help="Language code (e.g., en, es, fr). Auto-detect if not specified.",
 )
-def generate(video_path: str, model: str, language: str | None):
+@click.option(
+    "--karaoke",
+    is_flag=True,
+    default=False,
+    help="Generate karaoke-style subtitles with progressive highlighting.",
+)
+def generate(video_path: str, model: str, language: str | None, karaoke: bool):
     if not os.path.isfile(video_path):
-        raise click.BadParameter(f"File not found: {video_path}")
+        cwd_path = os.path.join(os.getcwd(), os.path.basename(video_path))
+        if os.path.isfile(cwd_path):
+            video_path = cwd_path
+        else:
+            raise click.BadParameter(f"File not found: {video_path}")
 
     video_info = get_video_info(video_path)
     device = transcribe.get_device()
@@ -77,7 +87,7 @@ def generate(video_path: str, model: str, language: str | None):
         result = transcribe.transcribe(audio_path, model, language)
 
         output_path = os.path.splitext(video_path)[0] + ".srt"
-        srt_writer.write_srt(result, output_path)
+        srt_writer.write_srt(result, output_path, karaoke)
 
         console.print(f"[green]Done: {output_path}[/green]")
     except Exception as e:

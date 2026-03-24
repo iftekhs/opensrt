@@ -10,6 +10,27 @@ from opensrt import srt_writer
 console = Console()
 
 
+def format_duration(seconds: float) -> str:
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    return f"{hours}:{minutes:02d}:{secs:02d}"
+
+
+def get_video_info(video_path: str) -> dict:
+    try:
+        info = audio.get_video_info(video_path)
+        return {
+            "filename": info["filename"],
+            "duration": format_duration(info["duration"]),
+        }
+    except Exception:
+        return {
+            "filename": os.path.basename(video_path),
+            "duration": "Unknown",
+        }
+
+
 @click.group()
 @click.version_option(version=__version__)
 def cli():
@@ -33,21 +54,32 @@ def generate(video_path: str, model: str, language: str | None):
     if not os.path.isfile(video_path):
         raise click.BadParameter(f"File not found: {video_path}")
 
+    video_info = get_video_info(video_path)
+    device = transcribe.get_device()
+    gpu_name = transcribe.get_gpu_name()
+    lang_display = language if language else "Auto-detect"
+
+    console.print("")
+    console.print("==================")
+    console.print(f"File: {video_info['filename']}")
+    console.print(f"Duration: {video_info['duration']}")
+    console.print(f"Language: {lang_display}")
+    console.print(f"Using: {device.upper()} ({gpu_name})")
+    console.print("==================")
+    console.print("")
+
     audio_path = None
     try:
-        console.print(f"[cyan]Extracting audio from video...[/cyan]")
+        console.print("[cyan]Extracting audio...[/cyan]", end="\r")
         audio_path = audio.extract_audio(video_path)
 
-        console.print(
-            f"[cyan]Loading model '{model}' (downloads on first use)...[/cyan]"
-        )
-        with console.status("[cyan]Transcribing...[/cyan]"):
-            result = transcribe.transcribe(audio_path, model, language)
+        console.print(f"[cyan]Loading model '{model}'...[/cyan]", end="\r")
+        result = transcribe.transcribe(audio_path, model, language)
 
         output_path = os.path.splitext(video_path)[0] + ".srt"
         srt_writer.write_srt(result, output_path)
 
-        console.print(f"[green]Success! Created {output_path}[/green]")
+        console.print(f"[green]Done: {output_path}[/green]")
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         raise

@@ -3,6 +3,13 @@ import ffmpeg
 import os
 
 
+def get_video_info(video_path: str) -> dict:
+    probe = ffmpeg.probe(video_path)
+    duration = float(probe["format"]["duration"])
+    filename = os.path.basename(video_path)
+    return {"filename": filename, "duration": duration}
+
+
 def extract_audio(video_path: str) -> str:
     fd, output_path = tempfile.mkstemp(suffix=".wav")
     os.close(fd)
@@ -17,7 +24,13 @@ def extract_audio(video_path: str) -> str:
             ar=16000,
             ac=1,
         )
-        ffmpeg.run(stream, overwrite_output=True, quiet=True)
+        ffmpeg.run(
+            stream,
+            overwrite_output=True,
+            quiet=True,
+            capture_stdout=True,
+            capture_stderr=True,
+        )
     except ffmpeg.Error as e:
         raise RuntimeError(f"ffmpeg failed: {e.stderr.decode() if e.stderr else str(e)}")
     except FileNotFoundError:

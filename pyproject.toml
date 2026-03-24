@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opensrt"
+version = "1.0.0"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.1",
+    "ffmpeg-python>=0.2",
+    "stable-ts>=2.17",
+    "rich>=13.0",
+]
+
+[project.scripts]
+opensrt = "opensrt.cli:cli"

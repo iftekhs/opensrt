@@ -28,3 +28,4 @@ venv/
 ENV/
 
 *.egg-info/
+todo.md

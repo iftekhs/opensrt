@@ -23,7 +23,6 @@ def transcribe(
     audio_path: str,
     model_name: str = "base",
     language: str | None = None,
-    separate: bool = True,
     vad: bool = True,
     gap_threshold: float = 0.8,
 ) -> stable_whisper.WhisperResult:
@@ -36,7 +35,6 @@ def transcribe(
         regroup=False,
         verbose=False,
         vad=vad,
-        demucs=separate,
     )
 
     (result

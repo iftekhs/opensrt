@@ -62,9 +62,15 @@ def cli():
     help="Enable Silero VAD for silence detection",
 )
 @click.option(
-    "--separate/--no-separate",
+    "--denoise/--no-denoise",
     default=True,
-    help="Strip music and isolate vocals before transcribing (recommended for videos with background music)",
+    help="Remove background noise using ffmpeg + noisereduce (fast, ~10-15s for 5min video)",
+)
+@click.option(
+    "--nr-strength",
+    default=0.75,
+    type=click.FloatRange(0.1, 1.0),
+    help="Noise reduction strength 0.1-1.0 (default 0.75)",
 )
 @click.option(
     "--gap",
@@ -72,7 +78,7 @@ def cli():
     type=float,
     help="Minimum silence gap in seconds to split subtitles",
 )
-def generate(video_path: str, model: str, language: str | None, karaoke: bool, vad: bool, separate: bool, gap: float):
+def generate(video_path: str, model: str, language: str | None, karaoke: bool, vad: bool, denoise: bool, nr_strength: float, gap: float):
     if not os.path.isfile(video_path):
         cwd_path = os.path.join(os.getcwd(), os.path.basename(video_path))
         if os.path.isfile(cwd_path):
@@ -96,15 +102,16 @@ def generate(video_path: str, model: str, language: str | None, karaoke: bool, v
 
     audio_path = None
     try:
-        console.print("[cyan]Extracting audio...[/cyan]", end="\r")
-        audio_path = audio.extract_audio(video_path)
-
-        if separate:
-            console.print(f"[cyan]Loading model '{model}' with demucs...[/cyan]", end="\r")
+        if denoise:
+            console.print("[cyan]Extracting and denoising audio (ffmpeg + noisereduce)...[/cyan]", end="\r")
+            audio_path = audio.extract_voice_audio(video_path, nr_strength=nr_strength)
         else:
-            console.print(f"[cyan]Loading model '{model}'...[/cyan]", end="\r")
+            console.print("[cyan]Extracting audio...[/cyan]", end="\r")
+            audio_path = audio.extract_audio(video_path)
+
+        console.print(f"[cyan]Loading model '{model}'...[/cyan]", end="\r")
         
-        result = transcribe.transcribe(audio_path, model, language, separate, vad, gap)
+        result = transcribe.transcribe(audio_path, model, language, vad, gap)
 
         output_path = os.path.splitext(video_path)[0] + ".srt"
         srt_writer.write_srt(result, output_path, karaoke)

@@ -56,7 +56,23 @@ def cli():
     default=False,
     help="Generate karaoke-style subtitles with progressive highlighting.",
 )
-def generate(video_path: str, model: str, language: str | None, karaoke: bool):
+@click.option(
+    "--vad/--no-vad",
+    default=True,
+    help="Enable Silero VAD for silence detection",
+)
+@click.option(
+    "--separate/--no-separate",
+    default=True,
+    help="Strip music and isolate vocals before transcribing (recommended for videos with background music)",
+)
+@click.option(
+    "--gap",
+    default=0.8,
+    type=float,
+    help="Minimum silence gap in seconds to split subtitles",
+)
+def generate(video_path: str, model: str, language: str | None, karaoke: bool, vad: bool, separate: bool, gap: float):
     if not os.path.isfile(video_path):
         cwd_path = os.path.join(os.getcwd(), os.path.basename(video_path))
         if os.path.isfile(cwd_path):
@@ -83,8 +99,12 @@ def generate(video_path: str, model: str, language: str | None, karaoke: bool):
         console.print("[cyan]Extracting audio...[/cyan]", end="\r")
         audio_path = audio.extract_audio(video_path)
 
-        console.print(f"[cyan]Loading model '{model}'...[/cyan]", end="\r")
-        result = transcribe.transcribe(audio_path, model, language)
+        if separate:
+            console.print(f"[cyan]Loading model '{model}' with demucs...[/cyan]", end="\r")
+        else:
+            console.print(f"[cyan]Loading model '{model}'...[/cyan]", end="\r")
+        
+        result = transcribe.transcribe(audio_path, model, language, separate, vad, gap)
 
         output_path = os.path.splitext(video_path)[0] + ".srt"
         srt_writer.write_srt(result, output_path, karaoke)

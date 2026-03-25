@@ -23,14 +23,26 @@ def transcribe(
     audio_path: str,
     model_name: str = "base",
     language: str | None = None,
+    separate: bool = True,
+    vad: bool = True,
+    gap_threshold: float = 0.8,
 ) -> stable_whisper.WhisperResult:
     device = get_device()
     model = stable_whisper.load_model(model_name, device=device)
-    
+
     result = model.transcribe(
         audio_path,
         language=language,
-        regroup=True,
+        regroup=False,
         verbose=False,
+        vad=vad,
+        demucs=separate,
     )
+
+    (result
+        .split_by_gap(gap_threshold)
+        .merge_by_gap(0.2, max_words=3)
+        .split_by_punctuation([('.', ' '), '?', '!', '。', '？'])
+    )
+
     return result

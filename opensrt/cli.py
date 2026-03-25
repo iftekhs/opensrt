@@ -9,6 +9,16 @@ from opensrt import srt_writer
 
 console = Console()
 
+FONT_OPTIONS = ["Arial", "Tahoma", "Verdana", "Times New Roman", "Courier New", "Georgia"]
+
+
+def prompt_font() -> str:
+    console.print("\n[bold]Select subtitle font:[/bold]")
+    for i, font in enumerate(FONT_OPTIONS, 1):
+        console.print(f"  {i}. {font}")
+    choice = click.prompt("Enter number (1-6)", type=int, default=1)
+    return FONT_OPTIONS[min(max(choice, 1), len(FONT_OPTIONS)) - 1]
+
 
 def format_duration(seconds: float) -> str:
     hours = int(seconds // 3600)
@@ -78,7 +88,12 @@ def cli():
     type=float,
     help="Minimum silence gap in seconds to split subtitles",
 )
-def generate(video_path: str, model: str, language: str | None, karaoke: bool, vad: bool, denoise: bool, nr_strength: float, gap: float):
+@click.option(
+    "--font",
+    default=None,
+    help="Font for subtitles (will prompt if not specified)",
+)
+def generate(video_path: str, model: str, language: str | None, karaoke: bool, vad: bool, denoise: bool, nr_strength: float, gap: float, font: str | None):
     if not os.path.isfile(video_path):
         cwd_path = os.path.join(os.getcwd(), os.path.basename(video_path))
         if os.path.isfile(cwd_path):
@@ -100,6 +115,9 @@ def generate(video_path: str, model: str, language: str | None, karaoke: bool, v
     console.print("==================")
     console.print("")
 
+    if font is None:
+        font = prompt_font()
+
     audio_path = None
     try:
         if denoise:
@@ -114,7 +132,7 @@ def generate(video_path: str, model: str, language: str | None, karaoke: bool, v
         result = transcribe.transcribe(audio_path, model, language, vad, gap)
 
         output_path = os.path.splitext(video_path)[0] + ".srt"
-        srt_writer.write_srt(result, output_path, karaoke)
+        srt_writer.write_srt(result, output_path, karaoke, font)
 
         console.print(f"[green]Done: {output_path}[/green]")
     except Exception as e:

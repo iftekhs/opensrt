@@ -10,6 +10,14 @@ from opensrt import srt_writer
 console = Console()
 
 FONT_OPTIONS = ["Arial", "Tahoma", "Verdana", "Times New Roman", "Courier New", "Georgia"]
+COLOR_OPTIONS = {
+    "White": "#FFFFFF",
+    "Yellow": "#FFFF00",
+    "Green": "#00FF00",
+    "Cyan": "#00FFFF",
+    "Magenta": "#FF00FF",
+    "Red": "#FF0000",
+}
 
 
 def prompt_font() -> str:
@@ -18,6 +26,15 @@ def prompt_font() -> str:
         console.print(f"  {i}. {font}")
     choice = click.prompt("Enter number (1-6)", type=int, default=1)
     return FONT_OPTIONS[min(max(choice, 1), len(FONT_OPTIONS)) - 1]
+
+
+def prompt_color() -> str:
+    console.print("\n[bold]Select subtitle color:[/bold]")
+    colors = list(COLOR_OPTIONS.keys())
+    for i, color in enumerate(colors, 1):
+        console.print(f"  {i}. {color}")
+    choice = click.prompt("Enter number (1-6)", type=int, default=1)
+    return colors[min(max(choice, 1), len(colors)) - 1]
 
 
 def format_duration(seconds: float) -> str:
@@ -93,7 +110,12 @@ def cli():
     default=None,
     help="Font for subtitles (will prompt if not specified)",
 )
-def generate(video_path: str, model: str, language: str | None, karaoke: bool, vad: bool, denoise: bool, nr_strength: float, gap: float, font: str | None):
+@click.option(
+    "--color",
+    default=None,
+    help="Color for subtitles (will prompt if not specified)",
+)
+def generate(video_path: str, model: str, language: str | None, karaoke: bool, vad: bool, denoise: bool, nr_strength: float, gap: float, font: str | None, color: str | None):
     if not os.path.isfile(video_path):
         cwd_path = os.path.join(os.getcwd(), os.path.basename(video_path))
         if os.path.isfile(cwd_path):
@@ -118,6 +140,9 @@ def generate(video_path: str, model: str, language: str | None, karaoke: bool, v
     if font is None:
         font = prompt_font()
 
+    if color is None:
+        color = prompt_color()
+
     audio_path = None
     try:
         if denoise:
@@ -132,7 +157,7 @@ def generate(video_path: str, model: str, language: str | None, karaoke: bool, v
         result = transcribe.transcribe(audio_path, model, language, vad, gap)
 
         output_path = os.path.splitext(video_path)[0] + ".srt"
-        srt_writer.write_srt(result, output_path, karaoke, font)
+        srt_writer.write_srt(result, output_path, karaoke, font, color)
 
         console.print(f"[green]Done: {output_path}[/green]")
     except Exception as e:

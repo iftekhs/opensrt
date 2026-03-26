@@ -78,12 +78,6 @@ def cli():
     help="Language code (e.g., en, es, fr). Auto-detect if not specified.",
 )
 @click.option(
-    "--karaoke",
-    is_flag=True,
-    default=False,
-    help="Generate karaoke-style subtitles with progressive highlighting.",
-)
-@click.option(
     "--vad/--no-vad",
     default=True,
     help="Enable Silero VAD for silence detection",
@@ -115,7 +109,13 @@ def cli():
     default=None,
     help="Color for subtitles (will prompt if not specified)",
 )
-def generate(video_path: str, model: str, language: str | None, karaoke: bool, vad: bool, denoise: bool, nr_strength: float, gap: float, font: str | None, color: str | None):
+@click.option(
+    "--withdefaults",
+    is_flag=True,
+    default=False,
+    help="Skip font and color selection, use defaults (Arial, White)",
+)
+def generate(video_path: str, model: str, language: str | None, vad: bool, denoise: bool, nr_strength: float, gap: float, font: str | None, color: str | None, withdefaults: bool):
     if not os.path.isfile(video_path):
         cwd_path = os.path.join(os.getcwd(), os.path.basename(video_path))
         if os.path.isfile(cwd_path):
@@ -137,11 +137,14 @@ def generate(video_path: str, model: str, language: str | None, karaoke: bool, v
     console.print("==================")
     console.print("")
 
-    if font is None:
-        font = prompt_font()
-
-    if color is None:
-        color = prompt_color()
+    if withdefaults:
+        font = "Arial"
+        color = "White"
+    else:
+        if font is None:
+            font = prompt_font()
+        if color is None:
+            color = prompt_color()
 
     audio_path = None
     try:
@@ -157,7 +160,7 @@ def generate(video_path: str, model: str, language: str | None, karaoke: bool, v
         result = transcribe.transcribe(audio_path, model, language, vad, gap)
 
         output_path = os.path.splitext(video_path)[0] + ".srt"
-        srt_writer.write_srt(result, output_path, karaoke, font, color)
+        srt_writer.write_srt(result, output_path, font, color)
 
         console.print(f"[green]Done: {output_path}[/green]")
     except Exception as e:

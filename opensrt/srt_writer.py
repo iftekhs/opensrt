@@ -19,26 +19,28 @@ def format_timestamp(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
-def write_srt(result: stable_whisper.WhisperResult, output_path: str, karaoke: bool = False, font: str = "Arial", color: str = "White") -> None:
-    if karaoke:
-        result.to_srt_vtt(output_path, vtt=False, word_level=True, tag=('<font color="#00FF00">', '</font>'))
-    else:
-        color_hex = COLOR_HEX_MAP.get(color, "#FFFFFF")
-        lines = []
-        for i, segment in enumerate(result, 1):
-            start = format_timestamp(segment.start)
-            end = format_timestamp(segment.end)
-            text = segment.text.strip()
-            if font or color:
-                font_attrs = []
-                if font:
-                    font_attrs.append(f'face="{font}"')
-                if color:
-                    font_attrs.append(f'color="{color_hex}"')
-                text = f'<font {" ".join(font_attrs)}>{text}</font>'
-            lines.append(f"{i}\n{start} --> {end}\n{text}\n")
-        
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines))
+def write_srt(result: stable_whisper.WhisperResult, output_path: str, font: str = "Arial", color: str = "White") -> None:
+    color_hex = COLOR_HEX_MAP.get(color, "#FFFFFF")
     
+    lines = []
+    for i, segment in enumerate(result, 1):
+        start = format_timestamp(segment.start)
+        end = format_timestamp(segment.end)
+        text = segment.text.strip()
+        
+        if font or color:
+            font_attrs = []
+            if font:
+                font_attrs.append(f'face="{font}"')
+            if color:
+                font_attrs.append(f'color="{color_hex}"')
+            
+            font_tag = f'<font {" ".join(font_attrs)}>' if font_attrs else ""
+            text = f'{font_tag}{text}</font>'
+        
+        lines.append(f"{i}\n{start} --> {end}\n{text}\n")
+    
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
     print(f"Subtitles written to: {os.path.abspath(output_path)}")
